@@ -12,7 +12,33 @@ body{
   color:#00ff9c;
   font-family:Courier New, monospace;
   overflow:hidden;
+  display:flex;            /* flex untuk center content */
+  justify-content:center;  /* center horizontal */
+  align-items:center;      /* center vertical */
+  min-height:100vh;
 }
+
+.screen{
+  display:none;
+  padding:24px;
+  position:relative;
+  z-index:2;
+  width:90%;          /* responsive width */
+  max-width:400px;    /* jangan terlalu lebar desktop */
+  box-sizing:border-box;
+}
+
+input,textarea,button{
+  width:100%;
+  margin:10px 0;
+  padding:12px;
+  background:black;
+  border:1px solid #00ff9c;
+  color:#00ff9c;
+  font-family:inherit;
+  box-sizing:border-box;   /* penting supaya padding tak overflow */
+}
+
 canvas{position:fixed;inset:0;z-index:0}
 .screen{
   display:none;
@@ -261,3 +287,4 @@ function showFinal(){
 </script>
 </body>
 </html>
+
