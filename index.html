@@ -4,15 +4,32 @@
 <meta charset="UTF-8">
 <title>Hacker Birthday Mission</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <style>
-body{margin:0;background:black;color:#00ff9c;font-family:Courier New,monospace;overflow:hidden}
+body{
+  margin:0;
+  background:black;
+  color:#00ff9c;
+  font-family:Courier New, monospace;
+  overflow:hidden;
+}
 canvas{position:fixed;inset:0;z-index:0}
-.screen{display:none;min-height:100vh;padding:24px;position:relative;z-index:2}
+.screen{
+  display:none;
+  min-height:100vh;
+  padding:24px;
+  position:relative;
+  z-index:2;
+}
 .active{display:block}
 input,textarea,button{
-  width:100%;margin:10px 0;padding:12px;
-  background:black;border:1px solid #00ff9c;
-  color:#00ff9c;font-family:inherit
+  width:100%;
+  margin:10px 0;
+  padding:12px;
+  background:black;
+  border:1px solid #00ff9c;
+  color:#00ff9c;
+  font-family:inherit;
 }
 button:hover{background:#00ff9c;color:black;cursor:pointer}
 h1,h2{text-shadow:0 0 10px #00ff9c}
@@ -46,7 +63,6 @@ h1,h2{text-shadow:0 0 10px #00ff9c}
 <!-- GAME -->
 <div class="screen" id="game">
   <h2 id="gameTitle"></h2>
-  <p>Selesaikan security layer</p>
   <h1 id="gameQuestion"></h1>
   <div id="choices"></div>
   <div class="progress"><div class="bar" id="gameBar"></div></div>
@@ -67,8 +83,14 @@ h1,h2{text-shadow:0 0 10px #00ff9c}
 <script type="module">
 /* ================= FIREBASE ================= */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
-import { getFirestore, collection, addDoc, doc, getDoc, deleteDoc }
-from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  doc,
+  getDoc,
+  deleteDoc
+} from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBnsq6HINc_utsrxa__taeBHHdtIrCM04c",
@@ -79,11 +101,19 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
+/* ================= ELEMENTS ================= */
+const nameInput = document.getElementById("name");
+const dobInput  = document.getElementById("dob");
+const wishInput = document.getElementById("wish");
+const output    = document.getElementById("output");
+const btnCreate = document.getElementById("btnCreate");
+
 /* ================= MATRIX ================= */
 const c=document.getElementById("matrix"),ctx=c.getContext("2d");
 c.width=innerWidth;c.height=innerHeight;
 const chars="01HACKBIRTHDAY",font=14;
 const drops=Array(Math.floor(c.width/font)).fill(1);
+
 setInterval(()=>{
   ctx.fillStyle="rgba(0,0,0,.05)";
   ctx.fillRect(0,0,c.width,c.height);
@@ -102,10 +132,13 @@ const show=id=>{
   document.getElementById(id).classList.add("active");
 };
 
-const age=d=>{
+const calcAge=d=>{
   const b=new Date(d),t=new Date();
   let a=t.getFullYear()-b.getFullYear();
-  if(t<b.setFullYear(t.getFullYear()))a--;
+  if(
+    t.getMonth()<b.getMonth()||
+    (t.getMonth()===b.getMonth()&&t.getDate()<b.getDate())
+  )a--;
   return a;
 };
 
@@ -115,25 +148,29 @@ const vibrate=ms=>navigator.vibrate&&navigator.vibrate(ms);
 const ok=new Audio("https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg");
 const bad=new Audio("https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg");
 
-/* ================= CREATE ================= */
-btnCreate.onclick=async()=>{
-  if(!name.value||!dob.value||!wish.value){
+/* ================= CREATE LINK ================= */
+btnCreate.onclick = async () => {
+  if(
+    !nameInput.value.trim() ||
+    !dobInput.value ||
+    !wishInput.value.trim()
+  ){
     alert("Lengkapkan semua maklumat");
     return;
   }
 
-  const ref=await addDoc(collection(db,"missions"),{
-    Name:name.value,
-    DOB:dob.value,
-    Wish:wish.value
+  const ref = await addDoc(collection(db,"missions"),{
+    Name: nameInput.value.trim(),
+    DOB: dobInput.value,
+    Wish: wishInput.value.trim()
   });
 
-  const link=location.origin+location.pathname+"#"+ref.id;
-  output.innerHTML=`🔗 Share this link:<br><b>${link}</b>`;
+  const link = location.origin + location.pathname + "#" + ref.id;
+  output.innerHTML = `🔗 Share this link:<br><b>${link}</b>`;
 };
 
-/* ================= MISSION INIT ================= */
-const missionId=location.hash.replace("#","");
+/* ================= INIT MISSION ================= */
+const missionId = location.hash.replace("#","");
 let DATA=null;
 
 if(missionId){
@@ -143,19 +180,20 @@ if(missionId){
 async function initMission(){
   show("hack");
 
-  const snap=await getDoc(doc(db,"missions",missionId));
+  const snap = await getDoc(doc(db,"missions",missionId));
   if(!snap.exists()){
-    show("locked");
-    return;
+    show("locked"); return;
   }
 
-  DATA=snap.data();
+  DATA = snap.data();
   const today=new Date();
   const dob=new Date(DATA.DOB);
 
-  if(today.getDate()!==dob.getDate()||today.getMonth()!==dob.getMonth()){
-    show("locked");
-    return;
+  if(
+    today.getDate()!==dob.getDate() ||
+    today.getMonth()!==dob.getMonth()
+  ){
+    show("locked"); return;
   }
 
   startHack();
@@ -170,6 +208,7 @@ const hackLines=[
   "ACCESS GRANTED"
 ];
 let hi=0;
+
 function startHack(){
   show("hack");
   const iv=setInterval(()=>{
@@ -188,7 +227,8 @@ const questions=[
   {q:"2 + 3 × 2 = ?",c:["10","8","12"],a:1},
   {q:"Tujuan misi ini?",c:["Hack","Raikan birthday 🎉","Shutdown"],a:1},
   {q:"5² = ?",c:["10","25","30"],a:1},
-  {q:"Simbol birthday?",c:["💣","🎂","⚠️"],a:1}
+  {q:"Simbol birthday?",c:["💣","🎂","⚠️"],a:1},
+  {q:"Apa datang setahun sekali?",c:["Exam","Birthday","Update"],a:1}
 ];
 
 function startGame(){
@@ -203,9 +243,9 @@ function loadGame(){
   gameBar.style.width=(step/3*100)+"%";
   choices.innerHTML="";
 
-  q.c.forEach((t,i)=>{
+  q.c.forEach((txt,i)=>{
     const b=document.createElement("button");
-    b.textContent=t;
+    b.textContent=txt;
     b.onclick=async()=>{
       if(i===q.a){
         ok.play();vibrate(150);
@@ -229,7 +269,7 @@ function showFinal(){
   show("final");
   finalTitle.textContent=`🎉 SELAMAT HARI JADI ${DATA.Name.toUpperCase()} 🎉`;
   finalMsg.innerHTML=`
-    <b>Yang ke ${age(DATA.DOB)}!!</b><br><br>
+    <b>Yang ke ${calcAge(DATA.DOB)}!!</b><br><br>
     ${DATA.Wish}<br><br>
     <b>Status:</b> MISSION COMPLETE
   `;
