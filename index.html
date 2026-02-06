@@ -31,15 +31,12 @@ input,textarea,button{
   color:#00ff9c;
   font-family:inherit;
 }
-button:hover{
-  background:#00ff9c;
-  color:black;
-  cursor:pointer;
-}
+button:hover{background:#00ff9c;color:black;cursor:pointer}
 h1,h2{text-shadow:0 0 10px #00ff9c}
-.progress{height:6px;background:#003322}
-.bar{height:100%;width:0%;background:#00ff9c;transition:.3s}
 .typing{white-space:pre-line}
+.progress{height:8px;background:#003322;margin-top:12px}
+.bar{height:100%;width:0%;background:#00ff9c;transition:.4s}
+.lock{color:red;text-align:center;margin-top:40px}
 </style>
 </head>
 
@@ -60,15 +57,22 @@ h1,h2{text-shadow:0 0 10px #00ff9c}
 <div class="screen" id="hack">
   <h2>UNAUTHORIZED ACCESS</h2>
   <div class="typing" id="hackText"></div>
-  <div class="progress"><div class="bar" id="bar"></div></div>
+  <div class="progress"><div class="bar" id="hackBar"></div></div>
 </div>
 
 <!-- GAME -->
 <div class="screen" id="game">
-  <h2>DECRYPT MEMORY BLOCK</h2>
-  <h1 id="gameCode"></h1>
-  <input id="gameAnswer" placeholder="Enter decrypted code">
-  <button id="btnGame">EXECUTE</button>
+  <h2 id="gameTitle"></h2>
+  <p id="gameDesc"></p>
+  <h1 id="gameQuestion"></h1>
+  <div id="gameChoices"></div>
+  <div class="progress"><div class="bar" id="gameBar"></div></div>
+</div>
+
+<!-- LOCK -->
+<div class="screen" id="locked">
+  <h1>🔒 ACCESS LOCKED</h1>
+  <p class="lock">Misi ini hanya boleh dibuka pada hari jadi sasaran 🎂</p>
 </div>
 
 <!-- FINAL -->
@@ -80,164 +84,147 @@ h1,h2{text-shadow:0 0 10px #00ff9c}
 <script type="module">
 /* ================= FIREBASE ================= */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
-import {
-  getFirestore,
-  collection,
-  addDoc,
-  doc,
-  getDoc,
-  deleteDoc
-} from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, doc, getDoc, deleteDoc } 
+from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBnsq6HINc_utsrxa__taeBHHdtIrCM04c",
   authDomain: "hacker-birthday.firebaseapp.com",
-  projectId: "hacker-birthday",
-  storageBucket: "hacker-birthday.firebasestorage.app",
-  messagingSenderId: "301651147890",
-  appId: "1:301651147890:web:74ab861041a60f526516eb"
+  projectId: "hacker-birthday"
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 /* ================= MATRIX ================= */
-const c = document.getElementById("matrix");
-const ctx = c.getContext("2d");
-c.width = innerWidth;
-c.height = innerHeight;
-const chars = "01HACKBIRTHDAY";
-const font = 14;
-const cols = c.width / font;
-const drops = Array(Math.floor(cols)).fill(1);
-
+const c=document.getElementById("matrix"),ctx=c.getContext("2d");
+c.width=innerWidth;c.height=innerHeight;
+const chars="01HACKBIRTHDAY",font=14;
+const drops=Array(Math.floor(c.width/font)).fill(1);
 setInterval(()=>{
-  ctx.fillStyle = "rgba(0,0,0,.05)";
+  ctx.fillStyle="rgba(0,0,0,.05)";
   ctx.fillRect(0,0,c.width,c.height);
-  ctx.fillStyle = "#00ff9c";
-  ctx.font = font+"px monospace";
+  ctx.fillStyle="#00ff9c";
+  ctx.font=font+"px monospace";
   drops.forEach((y,i)=>{
-    const t = chars[Math.random()*chars.length|0];
-    ctx.fillText(t,i*font,y*font);
-    if(y*font > c.height && Math.random() > .975) drops[i]=0;
+    ctx.fillText(chars[Math.random()*chars.length|0],i*font,y*font);
+    if(y*font>c.height&&Math.random()>.975)drops[i]=0;
     drops[i]++;
   });
 },50);
 
 /* ================= HELPERS ================= */
-function show(id){
+const show=id=>{
   document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
   document.getElementById(id).classList.add("active");
-}
+};
 
-function calculateAge(dob){
-  const birth = new Date(dob);
-  const today = new Date();
-  let age = today.getFullYear() - birth.getFullYear();
-  const m = today.getMonth() - birth.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
-  return age;
-}
+const age=d=>{
+  const b=new Date(d),t=new Date();
+  let a=t.getFullYear()-b.getFullYear();
+  if(t.getMonth()<b.getMonth()||(
+    t.getMonth()===b.getMonth()&&t.getDate()<b.getDate()
+  ))a--;
+  return a;
+};
+
+const vibrate=ms=>navigator.vibrate&&navigator.vibrate(ms);
+
+/* ================= SOUND ================= */
+const success=new Audio("https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg");
+const fail=new Audio("https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg");
 
 /* ================= CREATE ================= */
-async function createMission(){
-  const name = document.getElementById("name").value;
-  const dob = document.getElementById("dob").value;
-  const wish = document.getElementById("wish").value;
-
-  if(!name || !dob || !wish){
-    alert("Lengkapkan semua maklumat");
-    return;
-  }
-
-  const ref = await addDoc(collection(db,"missions"),{
-    Name:name,
-    DOB:dob,
-    Wish:wish,
-    createdAt:Date.now()
+btnCreate.onclick=async()=>{
+  if(!name.value||!dob.value||!wish.value)return alert("Lengkapkan semua");
+  const ref=await addDoc(collection(db,"missions"),{
+    Name:name.value,DOB:dob.value,Wish:wish.value
   });
+  output.innerHTML=`🔗 <b>${location.origin+location.pathname+"#"+ref.id}</b>`;
+};
 
-  const link = location.origin + location.pathname + "#" + ref.id;
-  document.getElementById("output").innerHTML =
-    `🔗 Share this link:<br><b>${link}</b>`;
-}
-
-document.getElementById("btnCreate").onclick = createMission;
-
-/* ================= LOAD LINK ================= */
-const missionId = location.hash.replace("#","");
+/* ================= LOAD ================= */
+const id=location.hash.replace("#","");
 let DATA=null;
-
-if(missionId){
-  const snap = await getDoc(doc(db,"missions",missionId));
-  if(snap.exists()){
-    DATA = snap.data();
-    startHack();
+if(id){
+  const snap=await getDoc(doc(db,"missions",id));
+  if(!snap.exists())return;
+  DATA=snap.data();
+  const today=new Date();
+  const dobDate=new Date(DATA.DOB);
+  if(today.getDate()!==dobDate.getDate()||today.getMonth()!==dobDate.getMonth()){
+    show("locked");return;
   }
+  startHack();
 }
 
 /* ================= HACK ================= */
-const hackText = document.getElementById("hackText");
-const bar = document.getElementById("bar");
-const lines = [
-  "Intercepting signal...",
-  "Decrypting payload...",
-  "Bypassing firewall...",
-  "Injecting birthday.exe...",
-  "ACCESS GRANTED"
-];
-let p=0,i=0;
-
+const lines=["Intercepting signal...","Decrypting payload...","Bypassing firewall...","Injecting birthday.exe...","ACCESS GRANTED"];
+let i=0;
 function startHack(){
   show("hack");
-  const iv = setInterval(()=>{
-    hackText.textContent += lines[i]+"\n";
-    p+=20;
-    bar.style.width=p+"%";
-    i++;
-    if(i===lines.length){
+  const iv=setInterval(()=>{
+    hackText.textContent+=lines[i]+"\n";
+    hackBar.style.width=((i+1)/lines.length*100)+"%";
+    if(++i===lines.length){
       clearInterval(iv);
       setTimeout(startGame,800);
     }
   },600);
 }
 
-/* ================= GAME ================= */
-let gameSecret="";
+/* ================= GAMES ================= */
+let step=0;
+const questions=[
+  {q:"2 + 3 × 2 = ?",c:["10","8","12"],a:1},
+  {q:"Tujuan misi ini?",c:["Hack bank","Raikan hari jadi 🎉","Shutdown"],a:1},
+  {q:"Aku berjalan tanpa kaki, bercakap tanpa suara",c:["Api","Jam","Angin"],a:1},
+  {q:"5² = ?",c:["10","20","25"],a:2},
+  {q:"Apa simbol birthday?",c:["🎂","💣","🧠"],a:0}
+];
 
 function startGame(){
   show("game");
-  gameSecret = Math.random().toString(36).substring(2,7).toUpperCase();
-  document.getElementById("gameCode").textContent = gameSecret;
-  document.getElementById("gameAnswer").value="";
-
-  setTimeout(()=>{
-    document.getElementById("gameCode").textContent="•••••";
-  },2000);
+  loadGame();
 }
 
-document.getElementById("btnGame").onclick = async ()=>{
-  const user = document.getElementById("gameAnswer").value.toUpperCase();
-  if(user === gameSecret){
-    await deleteDoc(doc(db,"missions",missionId));
-    showFinal();
-  }else{
-    location.reload();
-  }
-};
+function loadGame(){
+  const q=questions.sort(()=>0.5-Math.random())[0];
+  gameTitle.textContent="SECURITY LAYER "+(step+1);
+  gameDesc.textContent="Selesaikan untuk teruskan misi";
+  gameQuestion.textContent=q.q;
+  gameChoices.innerHTML="";
+  gameBar.style.width=((step)/3*100)+"%";
+
+  q.c.forEach((txt,i)=>{
+    const b=document.createElement("button");
+    b.textContent=txt;
+    b.onclick=async()=>{
+      if(i===q.a){
+        success.play();vibrate(200);
+        if(++step<3)loadGame();
+        else{
+          await deleteDoc(doc(db,"missions",id));
+          showFinal();
+        }
+      }else{
+        fail.play();vibrate(600);
+        location.reload();
+      }
+    };
+    gameChoices.appendChild(b);
+  });
+}
 
 /* ================= FINAL ================= */
 function showFinal(){
   show("final");
-  const age = calculateAge(DATA.DOB);
-
-  document.getElementById("finalTitle").textContent =
-    "🎉 SELAMAT HARI JADI " + DATA.Name.toUpperCase() + " 🎉";
-
-  document.getElementById("finalMsg").innerHTML = `
-    <b>Yang ke ${age}!!</b> 🥳<br><br>
+  const a=age(DATA.DOB);
+  finalTitle.textContent="🎉 SELAMAT HARI JADI "+DATA.Name.toUpperCase()+" 🎉";
+  finalMsg.innerHTML=`
+    <b>Yang ke ${a}!!</b> 🥳<br><br>
     ${DATA.Wish}<br><br>
-    <b>Status:</b> LEGEND UNLOCKED
+    <b>Status:</b> MISSION COMPLETE
   `;
 }
 </script>
