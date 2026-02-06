@@ -63,13 +63,12 @@ h1,h2{text-shadow:0 0 10px #00ff9c}
   <div class="progress"><div class="bar" id="bar"></div></div>
 </div>
 
-<!-- VERIFY -->
-<div class="screen" id="verify">
-  <h2>SECURITY VERIFICATION</h2>
-  <h1 id="code"></h1>
-  <input id="answer" placeholder="Enter code">
-  <button id="btnVerify">VERIFY</button>
-  <p id="timer"></p>
+<!-- GAME -->
+<div class="screen" id="game">
+  <h2>DECRYPT MEMORY BLOCK</h2>
+  <h1 id="gameCode"></h1>
+  <input id="gameAnswer" placeholder="Enter decrypted code">
+  <button id="btnGame">EXECUTE</button>
 </div>
 
 <!-- FINAL -->
@@ -102,14 +101,6 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-/* ================= ELEMENTS ================= */
-const nameInput = document.getElementById("name");
-const dobInput = document.getElementById("dob");
-const wishInput = document.getElementById("wish");
-const output = document.getElementById("output");
-const btnCreate = document.getElementById("btnCreate");
-const btnVerify = document.getElementById("btnVerify");
-
 /* ================= MATRIX ================= */
 const c = document.getElementById("matrix");
 const ctx = c.getContext("2d");
@@ -120,7 +111,7 @@ const font = 14;
 const cols = c.width / font;
 const drops = Array(Math.floor(cols)).fill(1);
 
-setInterval(() => {
+setInterval(()=>{
   ctx.fillStyle = "rgba(0,0,0,.05)";
   ctx.fillRect(0,0,c.width,c.height);
   ctx.fillStyle = "#00ff9c";
@@ -139,41 +130,43 @@ function show(id){
   document.getElementById(id).classList.add("active");
 }
 
-/* ================= AGE CALC ================= */
 function calculateAge(dob){
   const birth = new Date(dob);
   const today = new Date();
   let age = today.getFullYear() - birth.getFullYear();
   const m = today.getMonth() - birth.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
-    age--;
-  }
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
   return age;
 }
 
-/* ================= CREATE LINK ================= */
+/* ================= CREATE ================= */
 async function createMission(){
-  if(!nameInput.value || !dobInput.value || !wishInput.value){
+  const name = document.getElementById("name").value;
+  const dob = document.getElementById("dob").value;
+  const wish = document.getElementById("wish").value;
+
+  if(!name || !dob || !wish){
     alert("Lengkapkan semua maklumat");
     return;
   }
 
   const ref = await addDoc(collection(db,"missions"),{
-    Name: nameInput.value,
-    DOB: dobInput.value,
-    Wish: wishInput.value,
-    createdAt: Date.now()
+    Name:name,
+    DOB:dob,
+    Wish:wish,
+    createdAt:Date.now()
   });
 
   const link = location.origin + location.pathname + "#" + ref.id;
-  output.innerHTML = `🔗 Share this link:<br><b>${link}</b>`;
+  document.getElementById("output").innerHTML =
+    `🔗 Share this link:<br><b>${link}</b>`;
 }
 
-btnCreate.addEventListener("click", createMission);
+document.getElementById("btnCreate").onclick = createMission;
 
-/* ================= LOAD SHARED LINK ================= */
+/* ================= LOAD LINK ================= */
 const missionId = location.hash.replace("#","");
-let DATA = null;
+let DATA=null;
 
 if(missionId){
   const snap = await getDoc(doc(db,"missions",missionId));
@@ -183,7 +176,7 @@ if(missionId){
   }
 }
 
-/* ================= HACK FLOW ================= */
+/* ================= HACK ================= */
 const hackText = document.getElementById("hackText");
 const bar = document.getElementById("bar");
 const lines = [
@@ -198,46 +191,44 @@ let p=0,i=0;
 function startHack(){
   show("hack");
   const iv = setInterval(()=>{
-    hackText.textContent += lines[i] + "\n";
-    p += 20;
-    bar.style.width = p + "%";
+    hackText.textContent += lines[i]+"\n";
+    p+=20;
+    bar.style.width=p+"%";
     i++;
-    if(i === lines.length){
+    if(i===lines.length){
       clearInterval(iv);
-      setTimeout(startVerify,800);
+      setTimeout(startGame,800);
     }
   },600);
 }
 
-/* ================= VERIFY ================= */
-let secret="", time=6, timerInt;
+/* ================= GAME ================= */
+let gameSecret="";
 
-function startVerify(){
-  show("verify");
-  secret = Math.random().toString(36).substring(2,7).toUpperCase();
-  document.getElementById("code").textContent = secret;
+function startGame(){
+  show("game");
+  gameSecret = Math.random().toString(36).substring(2,7).toUpperCase();
+  document.getElementById("gameCode").textContent = gameSecret;
+  document.getElementById("gameAnswer").value="";
 
-  timerInt = setInterval(()=>{
-    time--;
-    document.getElementById("timer").textContent = "Time left: " + time;
-    if(time<=0) location.reload();
-  },1000);
+  setTimeout(()=>{
+    document.getElementById("gameCode").textContent="•••••";
+  },2000);
 }
 
-btnVerify.addEventListener("click", async ()=>{
-  if(document.getElementById("answer").value.toUpperCase() === secret){
-    clearInterval(timerInt);
+document.getElementById("btnGame").onclick = async ()=>{
+  const user = document.getElementById("gameAnswer").value.toUpperCase();
+  if(user === gameSecret){
     await deleteDoc(doc(db,"missions",missionId));
     showFinal();
-  } else {
+  }else{
     location.reload();
   }
-});
+};
 
 /* ================= FINAL ================= */
 function showFinal(){
   show("final");
-
   const age = calculateAge(DATA.DOB);
 
   document.getElementById("finalTitle").textContent =
