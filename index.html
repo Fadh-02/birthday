@@ -139,6 +139,18 @@ function show(id){
   document.getElementById(id).classList.add("active");
 }
 
+/* ================= AGE CALC ================= */
+function calculateAge(dob){
+  const birth = new Date(dob);
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
+    age--;
+  }
+  return age;
+}
+
 /* ================= CREATE LINK ================= */
 async function createMission(){
   if(!nameInput.value || !dobInput.value || !wishInput.value){
@@ -225,11 +237,14 @@ btnVerify.addEventListener("click", async ()=>{
 /* ================= FINAL ================= */
 function showFinal(){
   show("final");
+
+  const age = calculateAge(DATA.DOB);
+
   document.getElementById("finalTitle").textContent =
-    "🎉 HAPPY BIRTHDAY " + DATA.Name.toUpperCase() + " 🎉";
+    "🎉 SELAMAT HARI JADI " + DATA.Name.toUpperCase() + " 🎉";
 
   document.getElementById("finalMsg").innerHTML = `
-    DOB: <b>${DATA.DOB}</b><br><br>
+    <b>Yang ke ${age}!!</b> 🥳<br><br>
     ${DATA.Wish}<br><br>
     <b>Status:</b> LEGEND UNLOCKED
   `;
@@ -237,4 +252,3 @@ function showFinal(){
 </script>
 </body>
 </html>
-
