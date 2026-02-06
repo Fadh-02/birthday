@@ -36,7 +36,6 @@ h1,h2{text-shadow:0 0 10px #00ff9c}
 .progress{height:8px;background:#003322;margin-top:12px}
 .bar{height:100%;width:0%;background:#00ff9c;transition:.4s}
 .typing{white-space:pre-line}
-.lock{text-align:center;color:red;margin-top:40px}
 </style>
 </head>
 
@@ -66,12 +65,6 @@ h1,h2{text-shadow:0 0 10px #00ff9c}
   <h1 id="gameQuestion"></h1>
   <div id="choices"></div>
   <div class="progress"><div class="bar" id="gameBar"></div></div>
-</div>
-
-<!-- LOCK -->
-<div class="screen" id="locked">
-  <h1>🔒 ACCESS DENIED</h1>
-  <p class="lock">Timestamp mismatch. Unlock only on birthday 🎂</p>
 </div>
 
 <!-- FINAL -->
@@ -136,9 +129,9 @@ const calcAge=d=>{
   const b=new Date(d),t=new Date();
   let a=t.getFullYear()-b.getFullYear();
   if(
-    t.getMonth()<b.getMonth()||
-    (t.getMonth()===b.getMonth()&&t.getDate()<b.getDate())
-  )a--;
+    t.getMonth()<b.getMonth() ||
+    (t.getMonth()===b.getMonth() && t.getDate()<b.getDate())
+  ) a--;
   return a;
 };
 
@@ -182,21 +175,12 @@ async function initMission(){
 
   const snap = await getDoc(doc(db,"missions",missionId));
   if(!snap.exists()){
-    show("locked"); return;
+    show("create");
+    return;
   }
 
   DATA = snap.data();
-  const today=new Date();
-  const dob=new Date(DATA.DOB);
-
-  if(
-    today.getDate()!==dob.getDate() ||
-    today.getMonth()!==dob.getMonth()
-  ){
-    show("locked"); return;
-  }
-
-  startHack();
+  startHack(); // 🔥 NO LOCK CHECK
 }
 
 /* ================= HACK ================= */
@@ -250,7 +234,7 @@ function loadGame(){
       if(i===q.a){
         ok.play();vibrate(150);
         step++;
-        if(step<3)loadGame();
+        if(step<3) loadGame();
         else{
           await deleteDoc(doc(db,"missions",missionId));
           showFinal();
