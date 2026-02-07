@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Admin – Hacker Birthday Mission</title>
+<title>Hacker Birthday Mission</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
@@ -16,15 +16,24 @@ body{
   align-items:center;
   min-height:100vh;
 }
-canvas{position:fixed;inset:0;z-index:0}
+
+canvas{
+  position:fixed;
+  inset:0;
+  z-index:0;
+}
+
 .screen{
   display:none;
-  z-index:2;
   width:90%;
   max-width:420px;
   padding:24px;
+  z-index:2;
+  box-sizing:border-box;
 }
+
 .active{display:block}
+
 input,textarea,button{
   width:100%;
   margin:10px 0;
@@ -32,11 +41,31 @@ input,textarea,button{
   background:black;
   border:1px solid #00ff9c;
   color:#00ff9c;
+  font-family:inherit;
+  box-sizing:border-box;
 }
-button:hover{background:#00ff9c;color:black;cursor:pointer}
+
+button:hover{
+  background:#00ff9c;
+  color:black;
+  cursor:pointer;
+}
+
 h1,h2{text-shadow:0 0 10px #00ff9c}
-.progress{height:8px;background:#003322;margin-top:12px}
-.bar{height:100%;width:0%;background:#00ff9c;transition:.4s}
+
+.progress{
+  height:8px;
+  background:#003322;
+  margin-top:12px;
+}
+
+.bar{
+  height:100%;
+  width:0%;
+  background:#00ff9c;
+  transition:.4s;
+}
+
 .typing{white-space:pre-line}
 </style>
 </head>
@@ -46,16 +75,10 @@ h1,h2{text-shadow:0 0 10px #00ff9c}
 
 <!-- CREATE -->
 <div class="screen active" id="create">
-  <h1>🎂 ADMIN HACKER BIRTHDAY</h1>
-
-  <button id="btnPay">💳 TEST PAYMENT (RM0)</button>
-
-  <p id="creditInfo"></p>
-
+  <h1>🎂 CREATE HACKER BIRTHDAY</h1>
   <input id="name" placeholder="Target Name">
   <input id="dob" type="date">
   <textarea id="wish" placeholder="Secret birthday wish..."></textarea>
-
   <button id="btnCreate">GENERATE SECRET LINK</button>
   <p id="output"></p>
 </div>
@@ -85,7 +108,12 @@ h1,h2{text-shadow:0 0 10px #00ff9c}
 /* ========== FIREBASE ========== */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
 import {
-  getFirestore, collection, addDoc, doc, getDoc, deleteDoc
+  getFirestore,
+  collection,
+  addDoc,
+  doc,
+  getDoc,
+  deleteDoc
 } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -97,11 +125,19 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-/* ========== MATRIX ========== */
+/* ========== ELEMENTS ========== */
+const nameInput = document.getElementById("name");
+const dobInput  = document.getElementById("dob");
+const wishInput = document.getElementById("wish");
+const output    = document.getElementById("output");
+const btnCreate = document.getElementById("btnCreate");
+
+/* ========== MATRIX EFFECT ========== */
 const c=document.getElementById("matrix"),ctx=c.getContext("2d");
 c.width=innerWidth;c.height=innerHeight;
 const chars="01HACKBIRTHDAY",font=14;
 const drops=Array(Math.floor(c.width/font)).fill(1);
+
 setInterval(()=>{
   ctx.fillStyle="rgba(0,0,0,.05)";
   ctx.fillRect(0,0,c.width,c.height);
@@ -119,69 +155,57 @@ const show=id=>{
   document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
   document.getElementById(id).classList.add("active");
 };
+
+const calcAge=d=>{
+  const b=new Date(d),t=new Date();
+  let a=t.getFullYear()-b.getFullYear();
+  if(t.getMonth()<b.getMonth() ||
+    (t.getMonth()===b.getMonth() && t.getDate()<b.getDate())
+  ) a--;
+  return a;
+};
+
 const vibrate=ms=>navigator.vibrate&&navigator.vibrate(ms);
+
+/* ========== SOUND ========== */
 const ok=new Audio("https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg");
 const bad=new Audio("https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg");
 
-/* ========== PAYMENT (ADMIN TEST) ========== */
-const PAY_LINK="https://toyyibpay.com/BirthTest";
-const creditInfo=document.getElementById("creditInfo");
-
-document.getElementById("btnPay").onclick=()=>{
-  location.href=PAY_LINK;
-};
-
-const params=new URLSearchParams(location.search);
-if(params.get("paid")==="success"){
-  localStorage.setItem("credits","999");
-  history.replaceState({},document.title,location.pathname);
-}
-
-function credits(){
-  return parseInt(localStorage.getItem("credits")||"0");
-}
-creditInfo.textContent="Credits: "+credits();
-
-/* ========== CREATE ========== */
-const nameInput=name;
-const dobInput=dob;
-const wishInput=wish;
-
-btnCreate.onclick=async()=>{
-  if(credits()<=0){
-    alert("Sila buat TEST PAYMENT dahulu");
-    return;
-  }
-  if(!nameInput.value||!dobInput.value||!wishInput.value){
+/* ========== CREATE LINK ========== */
+btnCreate.onclick = async () => {
+  if(!nameInput.value.trim() || !dobInput.value || !wishInput.value.trim()){
     alert("Lengkapkan semua maklumat");
     return;
   }
 
-  localStorage.setItem("credits",credits()-1);
-  creditInfo.textContent="Credits: "+credits();
-
-  const ref=await addDoc(collection(db,"missions"),{
-    Name:nameInput.value,
-    DOB:dobInput.value,
-    Wish:wishInput.value
+  const ref = await addDoc(collection(db,"missions"),{
+    Name: nameInput.value.trim(),
+    DOB: dobInput.value,
+    Wish: wishInput.value.trim()
   });
 
-  output.innerHTML=`🔗 Share link:<br><b>${location.origin+location.pathname+"#"+ref.id}</b>`;
+  const link = location.origin + location.pathname + "#" + ref.id;
+  output.innerHTML = `🔗 Share this link:<br><b>${link}</b>`;
 };
 
 /* ========== INIT MISSION ========== */
-const missionId=location.hash.replace("#","");
+const missionId = location.hash.replace("#","");
 let DATA=null;
 
-if(missionId){
-  const snap=await getDoc(doc(db,"missions",missionId));
-  if(snap.exists()){
-    DATA=snap.data();
-    startHack();
+if(missionId) initMission();
+
+async function initMission(){
+  show("hack");
+  const snap = await getDoc(doc(db,"missions",missionId));
+  if(!snap.exists()){
+    show("create");
+    return;
   }
+  DATA = snap.data();
+  startHack();
 }
 
-/* ========== HACK ========== */
+/* ========== HACK SEQUENCE ========== */
 const hackLines=[
   "Intercepting signal...",
   "Decrypting payload...",
@@ -190,14 +214,19 @@ const hackLines=[
   "ACCESS GRANTED"
 ];
 let hi=0;
+
 function startHack(){
-  show("hack");
+  hackText.textContent="";
+  hackBar.style.width="0%";
+  hi=0;
+
   const iv=setInterval(()=>{
     hackText.textContent+=hackLines[hi]+"\n";
     hackBar.style.width=((hi+1)/hackLines.length*100)+"%";
-    if(++hi===hackLines.length){
+    hi++;
+    if(hi===hackLines.length){
       clearInterval(iv);
-      setTimeout(startGame,800);
+      setTimeout(startGame,700);
     }
   },600);
 }
@@ -208,22 +237,29 @@ const questions=[
   {q:"2 + 3 × 2 = ?",c:["10","8","12"],a:1},
   {q:"Tujuan misi ini?",c:["Hack","Raikan birthday 🎉","Shutdown"],a:1},
   {q:"5² = ?",c:["10","25","30"],a:1},
-  {q:"Simbol birthday?",c:["💣","🎂","⚠️"],a:1}
+  {q:"Simbol birthday?",c:["💣","🎂","⚠️"],a:1},
+  {q:"Apa datang setahun sekali?",c:["Exam","Birthday","Update"],a:1}
 ];
 
-function startGame(){show("game");loadGame();}
+function startGame(){
+  step=0;
+  show("game");
+  loadGame();
+}
+
 function loadGame(){
   const q=questions[Math.floor(Math.random()*questions.length)];
-  gameTitle.textContent="SECURITY "+(step+1)+"/3";
+  gameTitle.textContent=`SECURITY ${step+1}/3`;
   gameQuestion.textContent=q.q;
   gameBar.style.width=(step/3*100)+"%";
   choices.innerHTML="";
+
   q.c.forEach((txt,i)=>{
     const b=document.createElement("button");
     b.textContent=txt;
     b.onclick=async()=>{
       if(i===q.a){
-        ok.play();vibrate(150);
+        ok.play(); vibrate(120);
         step++;
         if(step<3) loadGame();
         else{
@@ -231,7 +267,7 @@ function loadGame(){
           showFinal();
         }
       }else{
-        bad.play();vibrate(500);
+        bad.play(); vibrate(400);
         location.reload();
       }
     };
@@ -240,17 +276,14 @@ function loadGame(){
 }
 
 /* ========== FINAL ========== */
-function calcAge(d){
-  const b=new Date(d),t=new Date();
-  let a=t.getFullYear()-b.getFullYear();
-  if(t.getMonth()<b.getMonth()||(t.getMonth()===b.getMonth()&&t.getDate()<b.getDate()))a--;
-  return a;
-}
-
 function showFinal(){
   show("final");
   finalTitle.textContent=`🎉 SELAMAT HARI JADI ${DATA.Name.toUpperCase()} 🎉`;
-  finalMsg.innerHTML=`Yang ke <b>${calcAge(DATA.DOB)}</b>!!<br><br>${DATA.Wish}<br><br><b>Status:</b> ADMIN TEST COMPLETE`;
+  finalMsg.innerHTML=`
+    <b>Yang ke ${calcAge(DATA.DOB)}!!</b><br><br>
+    ${DATA.Wish}<br><br>
+    <b>Status:</b> MISSION COMPLETE
+  `;
 }
 </script>
 </body>
