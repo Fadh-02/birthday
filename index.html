@@ -30,6 +30,7 @@ canvas{
   padding:24px;
   z-index:2;
   box-sizing:border-box;
+  text-align:center;
 }
 
 .active{display:block}
@@ -42,7 +43,6 @@ input,textarea,button{
   border:1px solid #00ff9c;
   color:#00ff9c;
   font-family:inherit;
-  box-sizing:border-box;
 }
 
 button:hover{
@@ -104,8 +104,17 @@ h1,h2{text-shadow:0 0 10px #00ff9c}
   <p id="finalMsg"></p>
 </div>
 
+<!-- DEAD LINK -->
+<div class="screen" id="dead">
+  <h1>🚫 LINK EXPIRED</h1>
+  <p>
+    This mission has already been completed.<br><br>
+    <b>Status:</b> ACCESS TERMINATED
+  </p>
+</div>
+
 <script type="module">
-/* ========== FIREBASE ========== */
+/* ========= FIREBASE ========= */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
 import {
   getFirestore,
@@ -125,14 +134,26 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-/* ========== ELEMENTS ========== */
-const nameInput = document.getElementById("name");
-const dobInput  = document.getElementById("dob");
-const wishInput = document.getElementById("wish");
-const output    = document.getElementById("output");
-const btnCreate = document.getElementById("btnCreate");
+/* ========= HELPERS ========= */
+const show = id => {
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+};
 
-/* ========== MATRIX EFFECT ========== */
+const calcAge = d => {
+  const b=new Date(d), t=new Date();
+  let a=t.getFullYear()-b.getFullYear();
+  if(t.getMonth()<b.getMonth() || (t.getMonth()==b.getMonth() && t.getDate()<b.getDate())) a--;
+  return a;
+};
+
+const vibrate = ms => navigator.vibrate && navigator.vibrate(ms);
+
+/* ========= SOUND ========= */
+const ok = new Audio("https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg");
+const bad = new Audio("https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg");
+
+/* ========= MATRIX ========= */
 const c=document.getElementById("matrix"),ctx=c.getContext("2d");
 c.width=innerWidth;c.height=innerHeight;
 const chars="01HACKBIRTHDAY",font=14;
@@ -150,45 +171,23 @@ setInterval(()=>{
   });
 },50);
 
-/* ========== HELPERS ========== */
-const show=id=>{
-  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
-  document.getElementById(id).classList.add("active");
-};
-
-const calcAge=d=>{
-  const b=new Date(d),t=new Date();
-  let a=t.getFullYear()-b.getFullYear();
-  if(t.getMonth()<b.getMonth() ||
-    (t.getMonth()===b.getMonth() && t.getDate()<b.getDate())
-  ) a--;
-  return a;
-};
-
-const vibrate=ms=>navigator.vibrate&&navigator.vibrate(ms);
-
-/* ========== SOUND ========== */
-const ok=new Audio("https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg");
-const bad=new Audio("https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg");
-
-/* ========== CREATE LINK ========== */
+/* ========= CREATE ========= */
 btnCreate.onclick = async () => {
-  if(!nameInput.value.trim() || !dobInput.value || !wishInput.value.trim()){
+  if(!name.value || !dob.value || !wish.value){
     alert("Lengkapkan semua maklumat");
     return;
   }
 
   const ref = await addDoc(collection(db,"missions"),{
-    Name: nameInput.value.trim(),
-    DOB: dobInput.value,
-    Wish: wishInput.value.trim()
+    Name:name.value,
+    DOB:dob.value,
+    Wish:wish.value
   });
 
-  const link = location.origin + location.pathname + "#" + ref.id;
-  output.innerHTML = `🔗 Share this link:<br><b>${link}</b>`;
+  output.innerHTML = `🔗 Share link:<br><b>${location.origin+location.pathname+"#"+ref.id}</b>`;
 };
 
-/* ========== INIT MISSION ========== */
+/* ========= INIT ========= */
 const missionId = location.hash.replace("#","");
 let DATA=null;
 
@@ -197,15 +196,17 @@ if(missionId) initMission();
 async function initMission(){
   show("hack");
   const snap = await getDoc(doc(db,"missions",missionId));
+
   if(!snap.exists()){
-    show("create");
+    show("dead");
     return;
   }
+
   DATA = snap.data();
   startHack();
 }
 
-/* ========== HACK SEQUENCE ========== */
+/* ========= HACK ========= */
 const hackLines=[
   "Intercepting signal...",
   "Decrypting payload...",
@@ -213,45 +214,66 @@ const hackLines=[
   "Injecting birthday.exe...",
   "ACCESS GRANTED"
 ];
-let hi=0;
 
 function startHack(){
+  let i=0;
   hackText.textContent="";
-  hackBar.style.width="0%";
-  hi=0;
-
   const iv=setInterval(()=>{
-    hackText.textContent+=hackLines[hi]+"\n";
-    hackBar.style.width=((hi+1)/hackLines.length*100)+"%";
-    hi++;
-    if(hi===hackLines.length){
+    hackText.textContent+=hackLines[i]+"\n";
+    hackBar.style.width=((i+1)/hackLines.length*100)+"%";
+    i++;
+    if(i===hackLines.length){
       clearInterval(iv);
       setTimeout(startGame,700);
     }
   },600);
 }
 
-/* ========== GAME ========== */
-let step=0;
-const questions=[
-  {q:"2 + 3 × 2 = ?",c:["10","8","12"],a:1},
-  {q:"Tujuan misi ini?",c:["Hack","Raikan birthday 🎉","Shutdown"],a:1},
-  {q:"5² = ?",c:["10","25","30"],a:1},
-  {q:"Simbol birthday?",c:["💣","🎂","⚠️"],a:1},
-  {q:"Apa datang setahun sekali?",c:["Exam","Birthday","Update"],a:1}
+/* ========= QUESTIONS ========= */
+const easy=[
+  {q:"2 → 6 → 12 → 20 → ?",c:["28","30","32"],a:0},
+  {q:"A → C → F → J → ?",c:["M","N","O"],a:1}
+];
+const medium=[
+  {q:"0x2A dalam perpuluhan?",c:["32","42","64"],a:1},
+  {q:"0x10 + 0x10 = ?",c:["16","32","48"],a:1}
+];
+const hard=[
+  {q:"Semakin disimpan, semakin hilang?",c:["Rahsia","Fail","Memori"],a:0},
+  {q:"Ada di depan, tak boleh dilihat?",c:["Masa depan","Udara","Bayang"],a:0}
 ];
 
+function pick(arr){return arr[Math.random()*arr.length|0];}
+
+function finalBoss(name){
+  const len=name.replace(/\s+/g,"").length;
+  return {
+    q:`FINAL BOSS 🎯<br>Nama sasaran ada berapa huruf?`,
+    c:[len-1,len,len+1].map(String),
+    a:1
+  };
+}
+
+/* ========= GAME ========= */
+let game=[],step=0;
+
 function startGame(){
+  game=[
+    pick(easy),
+    pick(medium),
+    pick(hard),
+    finalBoss(DATA.Name)
+  ];
   step=0;
   show("game");
   loadGame();
 }
 
 function loadGame(){
-  const q=questions[Math.floor(Math.random()*questions.length)];
-  gameTitle.textContent=`SECURITY ${step+1}/3`;
-  gameQuestion.textContent=q.q;
-  gameBar.style.width=(step/3*100)+"%";
+  const q=game[step];
+  gameTitle.innerHTML= step<3 ? `SECURITY ${step+1}/3` : "FINAL BOSS 💀";
+  gameQuestion.innerHTML=q.q;
+  gameBar.style.width=(step/4*100)+"%";
   choices.innerHTML="";
 
   q.c.forEach((txt,i)=>{
@@ -259,15 +281,15 @@ function loadGame(){
     b.textContent=txt;
     b.onclick=async()=>{
       if(i===q.a){
-        ok.play(); vibrate(120);
+        ok.play();vibrate(120);
         step++;
-        if(step<3) loadGame();
+        if(step<4) loadGame();
         else{
           await deleteDoc(doc(db,"missions",missionId));
           showFinal();
         }
       }else{
-        bad.play(); vibrate(400);
+        bad.play();vibrate(400);
         location.reload();
       }
     };
@@ -275,12 +297,12 @@ function loadGame(){
   });
 }
 
-/* ========== FINAL ========== */
+/* ========= FINAL ========= */
 function showFinal(){
   show("final");
-  finalTitle.textContent=`🎉 SELAMAT HARI JADI ${DATA.Name.toUpperCase()} 🎉`;
+  finalTitle.textContent=`🎉 HAPPY BIRTHDAY ${DATA.Name.toUpperCase()} 🎉`;
   finalMsg.innerHTML=`
-    <b>Yang ke ${calcAge(DATA.DOB)}!!</b><br><br>
+    <b>${calcAge(DATA.DOB)} YEARS OLD</b><br><br>
     ${DATA.Wish}<br><br>
     <b>Status:</b> MISSION COMPLETE
   `;
