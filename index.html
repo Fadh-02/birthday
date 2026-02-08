@@ -80,6 +80,8 @@ h1,h2{text-shadow:0 0 10px #00ff9c;}
 // ===== FIREBASE =====
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
 import { getFirestore, collection, addDoc, doc, getDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
+import { updateDoc } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
+
 
 const firebaseConfig = {
   apiKey: "AIzaSyBnsq6HINc_utsrxa__taeBHHdtIrCM04c",
@@ -150,6 +152,8 @@ btnCreate.onclick = async ()=>{
     Name: nameInput.value.trim(),
     DOB: dobInput.value,
     Wish: wishInput.value.trim()
+    used: false,
+    createdAt: Date.now()
   });
   const link = location.origin + location.pathname + "#" + ref.id;
   output.innerHTML = `🔗 Share this link:<br><b>${link}</b>`;
@@ -165,11 +169,30 @@ if(missionId) initMission();
 
 async function initMission(){
   show("hack");
-  const snap = await getDoc(doc(db,"missions",missionId));
-  if(!snap.exists()){ show("create"); return; }
+
+  const ref = doc(db,"missions",missionId);
+  const snap = await getDoc(ref);
+
+  // ❌ Tak wujud
+  if(!snap.exists()){
+    killLink();
+    return;
+  }
+
   DATA = snap.data();
+
+  // ❌ Dah pernah digunakan
+  if(DATA.used){
+    killLink();
+    return;
+  }
+
+  // 🔐 LOCK TERUS (sekali buka, terus mati untuk orang lain)
+  await updateDoc(ref,{ used:true });
+
   startHack();
 }
+
 
 // ===== HACK =====
 const hackLines = [
@@ -271,7 +294,25 @@ function showFinal(){
     <b>Status:</b> MISSION COMPLETE
   `;
 }
+
+
+  function killLink(){
+  document.body.innerHTML = `
+    <div style="
+      color:#00ff9c;
+      font-family:Courier New, monospace;
+      text-align:center;
+      padding:40px;
+    ">
+      <h1>☠️ ACCESS TERMINATED</h1>
+      <p>Link ini telah tamat atau telah digunakan.</p>
+      <p>Status: <b>SELF‑DESTRUCTED</b></p>
+    </div>
+  `;
+}
+
 </script>
 </body>
 </html>
+
 
