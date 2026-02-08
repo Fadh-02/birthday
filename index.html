@@ -174,12 +174,20 @@ const show=id=>{
   document.getElementById(id).classList.add("active");
 };
 
-const calcAge=d=>{
-  const b=new Date(d),t=new Date();
-  let a=t.getFullYear()-b.getFullYear();
-  if(t<b.setFullYear(t.getFullYear())) a--;
-  return a;
-};
+function calcAge(dob){
+  // dob from input type=date => YYYY-MM-DD
+  const [y,m,d] = dob.split("-").map(Number); 
+  const today = new Date();
+
+  let age = today.getFullYear() - y;
+
+  // check if birthday this year belum berlaku
+  if(today.getMonth()+1 < m || (today.getMonth()+1 === m && today.getDate() < d)){
+    age--;
+  }
+
+  return age;
+}
 
 const vibrate=ms=>navigator.vibrate&&navigator.vibrate(ms);
 
@@ -296,3 +304,4 @@ function showFinal(){
 </script>
 </body>
 </html>
+
