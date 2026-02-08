@@ -45,12 +45,7 @@ input,textarea,button{
   box-sizing:border-box;
 }
 
-button:disabled{
-  opacity:.4;
-  cursor:not-allowed;
-}
-
-button:hover:not(:disabled){
+button:hover{
   background:#00ff9c;
   color:black;
   cursor:pointer;
@@ -84,7 +79,7 @@ h1,h2{text-shadow:0 0 10px #00ff9c}
   <input id="name" placeholder="Target Name">
   <input id="dob" type="date">
   <textarea id="wish" placeholder="Secret birthday wish..."></textarea>
-  <button id="btnCreate" disabled>GENERATE SECRET LINK</button>
+  <button id="btnCreate">GENERATE SECRET LINK</button>
   <p id="output"></p>
 </div>
 
@@ -110,7 +105,6 @@ h1,h2{text-shadow:0 0 10px #00ff9c}
 </div>
 
 <script type="module">
-/* ========= FIREBASE ========= */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
 import {
   getFirestore,
@@ -130,100 +124,81 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-/* ========= ELEMENTS ========= */
+/* ELEMENTS */
 const nameInput = document.getElementById("name");
 const dobInput  = document.getElementById("dob");
 const wishInput = document.getElementById("wish");
-const btnCreate = document.getElementById("btnCreate");
 const output    = document.getElementById("output");
+const btnCreate = document.getElementById("btnCreate");
 
-/* ========= ENABLE BUTTON ========= */
-function checkForm(){
-  btnCreate.disabled = !(
-    nameInput.value.trim() &&
-    dobInput.value &&
-    wishInput.value.trim()
-  );
-}
-
-[nameInput, dobInput, wishInput].forEach(el=>{
-  el.addEventListener("input", checkForm);
-});
-
-/* ========= MATRIX ========= */
+/* MATRIX EFFECT */
 const c=document.getElementById("matrix"),ctx=c.getContext("2d");
 c.width=innerWidth;c.height=innerHeight;
 const chars="01HACKBIRTHDAY",font=14;
 const drops=Array(Math.floor(c.width/font)).fill(1);
-
 setInterval(()=>{
   ctx.fillStyle="rgba(0,0,0,.05)";
   ctx.fillRect(0,0,c.width,c.height);
   ctx.fillStyle="#00ff9c";
   ctx.font=font+"px monospace";
   drops.forEach((y,i)=>{
-    ctx.fillText(chars[Math.random()*chars.length|0],i*font,y*font);
+    ctx.fillText(chars[Math.floor(Math.random()*chars.length)],i*font,y*font);
     if(y*font>c.height&&Math.random()>.975)drops[i]=0;
     drops[i]++;
   });
 },50);
 
-/* ========= HELPERS ========= */
+/* HELPERS */
 const show=id=>{
   document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
   document.getElementById(id).classList.add("active");
 };
 
+// AGE CALC 100% SAFE
 function calcAge(dob){
-  // dob from input type=date => YYYY-MM-DD
-  const [y,m,d] = dob.split("-").map(Number); 
+  const [y,m,d] = dob.split("-").map(Number);
   const today = new Date();
-
-  let age = today.getFullYear() - y;
-
-  // check if birthday this year belum berlaku
-  if(today.getMonth()+1 < m || (today.getMonth()+1 === m && today.getDate() < d)){
-    age--;
-  }
-
+  let age = today.getFullYear()-y;
+  if(today.getMonth()+1 < m || (today.getMonth()+1 === m && today.getDate() < d)) age--;
   return age;
 }
 
 const vibrate=ms=>navigator.vibrate&&navigator.vibrate(ms);
-
-/* ========= SOUND ========= */
 const ok=new Audio("https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg");
 const bad=new Audio("https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg");
 
-/* ========= CREATE LINK ========= */
+/* CREATE LINK */
 btnCreate.onclick = async ()=>{
+  if(!nameInput.value.trim()||!dobInput.value||!wishInput.value.trim()){
+    alert("Lengkapkan semua maklumat");
+    return;
+  }
   const ref = await addDoc(collection(db,"missions"),{
-    Name:nameInput.value.trim(),
-    DOB:dobInput.value,
-    Wish:wishInput.value.trim()
+    Name: nameInput.value.trim(),
+    DOB: dobInput.value,
+    Wish: wishInput.value.trim()
   });
-
-  output.innerHTML = `🔗 Share this link:<br><b>${location.origin+location.pathname+"#"+ref.id}</b>`;
+  const link = location.origin + location.pathname + "#" + ref.id;
+  output.innerHTML = `🔗 Share this link:<br><b>${link}</b>`;
 };
 
-/* ========= INIT ========= */
-const missionId = location.hash.slice(1);
+/* INIT MISSION */
+const missionId = location.hash.replace("#","");
 let DATA=null;
-
 if(missionId) initMission();
 
 async function initMission(){
   show("hack");
   const snap = await getDoc(doc(db,"missions",missionId));
   if(!snap.exists()){
-    document.body.innerHTML="";
+    show("create");
     return;
   }
   DATA = snap.data();
   startHack();
 }
 
-/* ========= HACK ========= */
+/* HACK SEQUENCE */
 const hackLines=[
   "Intercepting signal...",
   "Decrypting payload...",
@@ -231,59 +206,75 @@ const hackLines=[
   "Injecting birthday.exe...",
   "ACCESS GRANTED"
 ];
-
+let hi=0;
 function startHack(){
-  let i=0;
   hackText.textContent="";
   hackBar.style.width="0%";
+  hi=0;
   const iv=setInterval(()=>{
-    hackText.textContent+=hackLines[i]+"\n";
-    hackBar.style.width=((i+1)/hackLines.length*100)+"%";
-    if(++i===hackLines.length){
+    hackText.textContent+=hackLines[hi]+"\n";
+    hackBar.style.width=((hi+1)/hackLines.length*100)+"%";
+    hi++;
+    if(hi===hackLines.length){
       clearInterval(iv);
       setTimeout(startGame,700);
     }
   },600);
 }
 
-/* ========= GAME ========= */
-let step=0;
-const questions=[
-  {q:"2 → 6 → 12 → 20 → ?",c:["28","30","32"],a:0},
-  {q:"0x2A dalam perpuluhan?",c:["32","42","64"],a:1},
-  {q:"Semakin disimpan semakin hilang?",c:["Rahsia","Fail","Masa"],a:0},
-  {q:"A → C → F → J → ?",c:["M","N","O"],a:1}
+/* GAME */
+let step=0; 
+let gameQuestions=[];
+const questions = [
+  {q:"2 + 3 × 2 = ?", c:["10","8","12"], a:1},
+  {q:"Apakah nombor seterusnya? 2 → 6 → 12 → 20 → ?", c:["28","30","32"], a:0},
+  {q:"Apakah seterusnya? A → C → F → J → ?", c:["M","N","O"], a:1},
+
+  {q:"Jika lima burung bertenggek di atas pokok dan dua terbang pergi, berapa yang tinggal?", c:["2","3","5"], a:1},
+  {q:"Saya semakin banyak kau kongsi, saya semakin hilang. Apakah saya?", c:["Rahsia","Makanan","Air"], a:0},
+
+  {q:"Semakin kau simpan aku, semakin aku hilang. Apakah aku?", c:["Rahsia","Memori","Fail"], a:0},
+  {q:"Aku sentiasa ada di hadapanmu, tetapi kau tak boleh melihat aku. Siapakah aku?", c:["Masa depan","Bayang","Udara"], a:0}
 ];
 
-let gameSet=[];
+// SHUFFLE
+function shuffle(arr){return arr.sort(()=>Math.random()-0.5);}
+
+// FINAL BOSS
+function finalBossQuestion(name){
+  const letters = name.replace(/\s+/g,"").length;
+  return {q:`Nama sasaran mengandungi berapa huruf (tanpa jarak)?`,
+          c:[String(letters-1),String(letters),String(letters+1)], a:1};
+}
 
 function startGame(){
   step=0;
-  gameSet=[...questions].sort(()=>Math.random()-0.5).slice(0,3);
+  gameQuestions = shuffle(questionPools).slice(0,3); // random 3
+  gameQuestions.push(finalBossQuestion(DATA.Name)); // tambah final boss
   show("game");
   loadGame();
 }
 
 function loadGame(){
-  const q=gameSet[step];
-  gameTitle.textContent=`SECURITY ${step+1}/3`;
+  const q = gameQuestions[step];
+  gameTitle.textContent=`SECURITY ${step+1}/${gameQuestions.length}`;
   gameQuestion.textContent=q.q;
-  gameBar.style.width=(step/3*100)+"%";
+  gameBar.style.width=(step/gameQuestions.length*100)+"%";
   choices.innerHTML="";
-
-  q.c.forEach((t,i)=>{
+  q.c.forEach((txt,i)=>{
     const b=document.createElement("button");
-    b.textContent=t;
+    b.textContent=txt;
     b.onclick=async()=>{
       if(i===q.a){
-        ok.play();vibrate(120);
-        if(++step<3) loadGame();
+        ok.play(); vibrate(120);
+        step++;
+        if(step<gameQuestions.length) loadGame();
         else{
           await deleteDoc(doc(db,"missions",missionId));
           showFinal();
         }
       }else{
-        bad.play();vibrate(400);
+        bad.play(); vibrate(400);
         location.reload();
       }
     };
@@ -291,7 +282,7 @@ function loadGame(){
   });
 }
 
-/* ========= FINAL ========= */
+/* FINAL */
 function showFinal(){
   show("final");
   finalTitle.textContent=`🎉 SELAMAT HARI JADI ${DATA.Name.toUpperCase()} 🎉`;
@@ -304,4 +295,3 @@ function showFinal(){
 </script>
 </body>
 </html>
-
